@@ -5,14 +5,17 @@ import pickle
 import os.path
 import pathfinder as pf
 
-from path import paths
+from CRLibrary.path import PathGen
+
+from wpilib import SmartDashboard
 
 class PathFinder():
 
-    def __init__(self, DT, getDistances, odometer):
+    def __init__(self, DT, model, odometer, getDistances):
 
         '''Variables'''
         self.DT = DT
+        self.model = model
         self.getDistances = getDistances
         self.od = odometer
         self.leftFollower = None
@@ -20,8 +23,9 @@ class PathFinder():
         self.PID = 0
 
         '''Gains'''
-        kA = [0.020,0.00,0.00,0.00]
-        self.gains = [1,0,1,1/paths.getLimits()[0],0]
+        kA = [0.000, 0.00, 0.00, 0.00] #angle
+        #gains[4] = Voltage per Velocity (feet per second)
+        self.gains = [0.005, 0, 0.35, 0.74/12, 0] #distance
         TolAngle = 3 #degrees
 
         '''PID Controllers'''
@@ -41,8 +45,9 @@ class PathFinder():
     def disablePID(self): self.angleController.disable()
 
     def initPath(self, name):
-        [left,right,modifier] = paths.getTraj(name)
-        paths.showPath(left,right,modifier)
+        self.time = 0
+        [left,right,modifier] = PathGen.getTraj(name, self.model)
+        PathGen.showPath(left,right,modifier)
 
         self.leftFollower = pf.followers.EncoderFollower(left)
         self.leftFollower.configureEncoder(int(self.getDistances()[0]*1000), 1000, 1/math.pi) #Pulse Initial, pulsePerRev, WheelDiam
@@ -55,12 +60,15 @@ class PathFinder():
         self.enablePID()
 
     def followPath(self):
+        self.time += 1
+        SmartDashboard.putNumber("TimePath:", self.time)
         angle = pf.r2d(self.leftFollower.getHeading())
         angle = 360-angle if angle>180 else -angle
         self.angleController.setSetpoint(angle)
 
         if(not self.leftFollower.isFinished()):
-            return [self.leftFollower.calculate(int(self.getDistances()[0]*1000))+self.PID, self.rightFollower.calculate(int(self.getDistances()[1]*1000))-self.PID]
+            out = [self.leftFollower.calculate(int(self.getDistances()[0]*1000))+self.PID, self.rightFollower.calculate(int(self.getDistances()[1]*1000))-self.PID]
+            return [out[0]+1.1/12, out[1]+1.1/12]
         else: return [0,0]
 
-    def isFinished(self): return self.leftFollower.isFinished()
+    def isFinished(self):  return self.leftFollower.isFinished()

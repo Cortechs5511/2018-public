@@ -9,8 +9,7 @@ from CRLibrary.physics import DifferentialDrive as ddrive
 from CRLibrary.util import units
 from CRLibrary.util import util
 
-
-from path import paths
+from CRLibrary.path import PathGen
 
 class Ramsetes():
 
@@ -31,17 +30,17 @@ class Ramsetes():
         self.finished = False
 
         '''Gains'''
-        kV = [0.40, 0.0, 0.1, 0.0]
-        kA = [0.03, 0.0, 0.0, 0.0]
+        kV = [0.01, 0.0, 0.0, 0.0] #velocity
+        kA = [0.000, 0.0, 0.0, 0.0] #angle
 
-        self.kB = 1.5
-        self.kZeta = 0.4
+        self.kB = 0.00 #curvature
+        self.kZeta = 0.19 #dampening
 
         TolVel = 0.2
-        TolAngle = 3
+        TolAngle = 1
 
         '''PID Controllers'''
-        self.MaxV = paths.getLimits()[0]
+        self.MaxV = PathGen.getLimits()[0]
         self.leftController = wpilib.PIDController(kV[0], kV[1], kV[2], kV[3], source=self.od.getLeftVelocity, output=self.setLeft)
         self.leftController.setInputRange(-self.MaxV-3, self.MaxV+3) #feet/second
         self.leftController.setOutputRange(-1, 1) #percent
@@ -92,8 +91,8 @@ class Ramsetes():
     def initPath(self, name):
         self.finished = False
 
-        [self.left,self.right,modifier] = paths.getTraj(name)
-        paths.showPath(self.left,self.right,modifier)
+        [self.left,self.right,modifier] = PathGen.getTraj(name, self.model)
+        PathGen.showPath(self.left,self.right,modifier)
 
         self.time = 0
         self.maxTime = len(self.left)
